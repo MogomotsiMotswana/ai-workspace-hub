@@ -75,11 +75,14 @@ function answerFor(prompt: string, detail: ResponseDetail) {
   const lower = prompt.toLowerCase();
   let response: string;
   if (lower.includes("priorit"))
-    response = "Here’s a practical way to reset the week:\n\n1. **Choose three outcomes** that would make Friday feel successful.\n2. **Separate urgent from important**—move low-impact requests to a later list.\n3. **Protect two 60-minute focus blocks** for your highest-value task.\n4. **Send one expectation-setting note** to anyone affected by a changed deadline.\n\nStart with the outcome that removes the biggest blocker for other people.";
+    response =
+      "Here’s a practical way to reset the week:\n\n1. **Choose three outcomes** that would make Friday feel successful.\n2. **Separate urgent from important**—move low-impact requests to a later list.\n3. **Protect two 60-minute focus blocks** for your highest-value task.\n4. **Send one expectation-setting note** to anyone affected by a changed deadline.\n\nStart with the outcome that removes the biggest blocker for other people.";
   else if (lower.includes("agenda") || lower.includes("meeting"))
-    response = "Use a decision-led agenda:\n\n- **5 min:** State the decision required and the shared goal\n- **10 min:** Confirm facts and constraints—no debate yet\n- **20 min:** Compare 2–3 viable options\n- **10 min:** Decide, assign an owner, and set a date\n- **5 min:** Capture risks and communication steps\n\nSend the decision question in advance so participants arrive prepared rather than discovering the issue in the room.";
+    response =
+      "Use a decision-led agenda:\n\n- **5 min:** State the decision required and the shared goal\n- **10 min:** Confirm facts and constraints—no debate yet\n- **20 min:** Compare 2–3 viable options\n- **10 min:** Decide, assign an owner, and set a date\n- **5 min:** Capture risks and communication steps\n\nSend the decision question in advance so participants arrive prepared rather than discovering the issue in the room.";
   else if (lower.includes("feedback"))
-    response = "Try a clear, low-defensiveness structure: **observation → impact → request**.\n\n> “In the last two project updates, the risk section arrived after the review. That left the team little time to respond. For the next update, could you flag risks by Tuesday noon—even if the details are still developing?”\n\nKeep it specific, discuss the work rather than the person, and invite their perspective before agreeing on the next step.";
+    response =
+      "Try a clear, low-defensiveness structure: **observation → impact → request**.\n\n> “In the last two project updates, the risk section arrived after the review. That left the team little time to respond. For the next update, could you flag risks by Tuesday noon—even if the details are still developing?”\n\nKeep it specific, discuss the work rather than the person, and invite their perspective before agreeing on the next step.";
   else
     response = `A useful way to approach **${prompt}** is to define the outcome first, identify the smallest next decision, and make ownership explicit.\n\nI’d suggest:\n1. Write the desired result in one sentence.\n2. List the two constraints that matter most.\n3. Choose one action you can complete today.\n4. Tell affected colleagues what will happen next and when.\n\nThis keeps the work actionable without over-planning.`;
 
@@ -625,7 +628,7 @@ function EmailGenerator({ defaultTone }: { defaultTone: Tone }) {
             </div>
             <Button
               className="w-full"
-               disabled={!recipient.trim() || !purpose.trim() || !points.trim() || generating}
+              disabled={!recipient.trim() || !purpose.trim() || !points.trim() || generating}
               onClick={() => generate()}
             >
               {generating ? (
@@ -1133,8 +1136,8 @@ function SettingsView({
           <div>
             <h2 className="font-bold">Session data</h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Drafts and conversations are temporary and clear automatically when you refresh or close
-              the page.
+              Drafts and conversations are temporary and clear automatically when you refresh or
+              close the page.
             </p>
           </div>
         </div>
