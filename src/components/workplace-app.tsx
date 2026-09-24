@@ -18,7 +18,10 @@ import {
   RefreshCw,
   Search,
   Send,
+  Settings as SettingsIcon,
+  SlidersHorizontal,
   Target,
+  Trash2,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,8 +46,9 @@ import {
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import brandMark from "@/assets/workplace-ai-mark.png";
 
-type View = "dashboard" | "email" | "research" | "chat";
+type View = "dashboard" | "email" | "research" | "chat" | "settings";
 type Tone = "Formal" | "Friendly" | "Persuasive";
+type ResponseDetail = "Concise" | "Balanced" | "Detailed";
 type ChatMessage = { id: number; role: "user" | "assistant"; text: string };
 type ResearchResult = { summary: string; insights: string[]; recommendations: string[] };
 
@@ -58,6 +62,7 @@ const navItems: Array<{
   { id: "email", label: "Smart Email Generator", short: "Email", icon: Mail },
   { id: "research", label: "AI Research Assistant", short: "Research", icon: Search },
   { id: "chat", label: "AI Chatbot", short: "Chat", icon: Bot },
+  { id: "settings", label: "Settings", short: "Settings", icon: SettingsIcon },
 ];
 
 const emailVersions: Record<Tone, string[]> = {
@@ -112,15 +117,83 @@ const suggestedPrompts = [
   "How can I give clearer feedback?",
 ];
 
-function answerFor(prompt: string) {
+function answerFor(prompt: string, detail: ResponseDetail) {
   const lower = prompt.toLowerCase();
+  let response: string;
   if (lower.includes("priorit"))
-    return "Here’s a practical way to reset the week:\n\n1. **Choose three outcomes** that would make Friday feel successful.\n2. **Separate urgent from important**—move low-impact requests to a later list.\n3. **Protect two 60-minute focus blocks** for your highest-value task.\n4. **Send one expectation-setting note** to anyone affected by a changed deadline.\n\nStart with the outcome that removes the biggest blocker for other people.";
-  if (lower.includes("agenda") || lower.includes("meeting"))
-    return "Use a decision-led agenda:\n\n- **5 min:** State the decision required and the shared goal\n- **10 min:** Confirm facts and constraints—no debate yet\n- **20 min:** Compare 2–3 viable options\n- **10 min:** Decide, assign an owner, and set a date\n- **5 min:** Capture risks and communication steps\n\nSend the decision question in advance so participants arrive prepared rather than discovering the issue in the room.";
-  if (lower.includes("feedback"))
-    return "Try a clear, low-defensiveness structure: **observation → impact → request**.\n\n> “In the last two project updates, the risk section arrived after the review. That left the team little time to respond. For the next update, could you flag risks by Tuesday noon—even if the details are still developing?”\n\nKeep it specific, discuss the work rather than the person, and invite their perspective before agreeing on the next step.";
-  return `A useful way to approach **${prompt}** is to define the outcome first, identify the smallest next decision, and make ownership explicit.\n\nI’d suggest:\n1. Write the desired result in one sentence.\n2. List the two constraints that matter most.\n3. Choose one action you can complete today.\n4. Tell affected colleagues what will happen next and when.\n\nThis keeps the work actionable without over-planning.`;
+    response = "Here’s a practical way to reset the week:\n\n1. **Choose three outcomes** that would make Friday feel successful.\n2. **Separate urgent from important**—move low-impact requests to a later list.\n3. **Protect two 60-minute focus blocks** for your highest-value task.\n4. **Send one expectation-setting note** to anyone affected by a changed deadline.\n\nStart with the outcome that removes the biggest blocker for other people.";
+  else if (lower.includes("agenda") || lower.includes("meeting"))
+    response = "Use a decision-led agenda:\n\n- **5 min:** State the decision required and the shared goal\n- **10 min:** Confirm facts and constraints—no debate yet\n- **20 min:** Compare 2–3 viable options\n- **10 min:** Decide, assign an owner, and set a date\n- **5 min:** Capture risks and communication steps\n\nSend the decision question in advance so participants arrive prepared rather than discovering the issue in the room.";
+  else if (lower.includes("feedback"))
+    response = "Try a clear, low-defensiveness structure: **observation → impact → request**.\n\n> “In the last two project updates, the risk section arrived after the review. That left the team little time to respond. For the next update, could you flag risks by Tuesday noon—even if the details are still developing?”\n\nKeep it specific, discuss the work rather than the person, and invite their perspective before agreeing on the next step.";
+  else
+    response = `A useful way to approach **${prompt}** is to define the outcome first, identify the smallest next decision, and make ownership explicit.\n\nI’d suggest:\n1. Write the desired result in one sentence.\n2. List the two constraints that matter most.\n3. Choose one action you can complete today.\n4. Tell affected colleagues what will happen next and when.\n\nThis keeps the work actionable without over-planning.`;
+
+  if (detail === "Concise") return response.split("\n\n").slice(0, 2).join("\n\n");
+  if (detail === "Detailed")
+    return `${response}\n\n**A useful next step:** Put the first action on your calendar, then define what “done” looks like before you begin.`;
+  return response;
+}
+
+function createEmailDraft(
+  recipient: string,
+  purpose: string,
+  points: string,
+  tone: Tone,
+  version: number,
+) {
+  const name = recipient.split(",")[0]?.trim() || recipient.trim();
+  const items = points
+    .split("\n")
+    .map((point) => point.trim())
+    .filter(Boolean);
+  const subject = purpose.replace(/[.!?]+$/, "");
+  const formattedPoints = items.map((point) => `• ${point}`).join("\n");
+  const opening =
+    tone === "Friendly"
+      ? `I hope you’re doing well. I wanted to reach out about ${purpose.toLowerCase()}.`
+      : tone === "Persuasive"
+        ? `${purpose} presents a valuable opportunity to create clear, measurable progress.`
+        : `I’m writing regarding ${purpose.toLowerCase()}.`;
+  const close =
+    tone === "Friendly"
+      ? "Let me know what you think, and I’ll take care of the next steps.\n\nThanks,"
+      : tone === "Persuasive"
+        ? "I recommend we align on these points now so we can move forward with confidence. Please share your thoughts.\n\nBest,"
+        : "Please review the points above and share any feedback or additions.\n\nKind regards,";
+  const alternate = version % 2 === 1 ? "Proposed next steps" : "Key points";
+  return `Subject: ${subject}${version % 2 === 1 ? " — next steps" : ""}\n\nHi ${name},\n\n${opening}\n\n${alternate}:\n${formattedPoints}\n\n${close}`;
+}
+
+function createResearchResult(
+  input: string,
+  sourceType: string,
+  version: number,
+  detail: ResponseDetail,
+): ResearchResult {
+  const clean = input.replace(/\s+/g, " ").trim();
+  const subject = clean.length > 100 ? `${clean.slice(0, 97)}…` : clean;
+  const source = sourceType === "Website URL" ? "the supplied website" : sourceType.toLowerCase();
+  const extra =
+    detail === "Detailed"
+      ? " The evidence should be tested against team size, role requirements, and existing operating norms before broad adoption."
+      : "";
+  return {
+    summary:
+      version % 2 === 0
+        ? `This ${source} examines ${subject}. The central takeaway is that successful implementation depends on clear ownership, measurable outcomes, and consistent communication rather than policy alone.${extra}`
+        : `A practical reading of ${subject} suggests that focused experiments are more useful than an immediate organisation-wide change. Teams should define the intended outcome, test the approach, and review evidence before scaling.${extra}`,
+    insights: [
+      `The strongest decisions connect “${subject}” to a specific workplace outcome rather than treating it as a standalone initiative.`,
+      "Clear expectations and visible ownership reduce execution gaps between planning and delivery.",
+      "A short review cycle makes it easier to identify unintended effects and adjust before they become embedded.",
+    ],
+    recommendations: [
+      "Define one measurable outcome and the person accountable for reporting progress.",
+      "Run a time-bound pilot with a representative team and document decisions as they are made.",
+      "Review results with affected colleagues, then keep, revise, or stop the approach based on evidence.",
+    ],
+  };
 }
 
 function copyText(text: string, setCopied: (value: boolean) => void) {
@@ -133,6 +206,8 @@ function WorkplaceApp() {
   const [view, setView] = useState<View>("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [defaultTone, setDefaultTone] = useState<Tone>("Formal");
+  const [responseDetail, setResponseDetail] = useState<ResponseDetail>("Balanced");
 
   const selectView = (next: View) => {
     setView(next);
@@ -217,7 +292,9 @@ function WorkplaceApp() {
                     ? "AI Research Assistant"
                     : view === "chat"
                       ? "AI Chatbot"
-                      : "Dashboard"}
+                      : view === "settings"
+                        ? "Settings"
+                        : "Dashboard"}
               </p>
               <p className="hidden text-xs text-muted-foreground sm:block">
                 Your focused workspace for better work
@@ -231,13 +308,21 @@ function WorkplaceApp() {
 
         <main className="mx-auto max-w-[1440px] p-4 pb-24 sm:p-7 lg:p-9">
           {view === "dashboard" && <Dashboard onSelect={selectView} />}
-          {view === "email" && <EmailGenerator />}
-          {view === "research" && <ResearchAssistant />}
-          {view === "chat" && <Chatbot />}
+          {view === "email" && <EmailGenerator defaultTone={defaultTone} />}
+          {view === "research" && <ResearchAssistant responseDetail={responseDetail} />}
+          {view === "chat" && <Chatbot responseDetail={responseDetail} />}
+          {view === "settings" && (
+            <SettingsView
+              defaultTone={defaultTone}
+              onToneChange={setDefaultTone}
+              responseDetail={responseDetail}
+              onDetailChange={setResponseDetail}
+            />
+          )}
         </main>
       </div>
 
-      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-4 rounded-xl border border-border bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl lg:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 rounded-xl border border-border bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl lg:hidden">
         {navItems.map((item) => (
           <Button
             key={item.id}
@@ -485,14 +570,12 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 const fieldClass =
   "w-full rounded-md border border-input bg-background px-3.5 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/20";
 
-function EmailGenerator() {
-  const [recipient, setRecipient] = useState("Priya, Head of Operations");
-  const [purpose, setPurpose] = useState("Prepare for our Q4 planning session");
-  const [points, setPoints] = useState(
-    "Review current performance\nAgree on our top three priorities\nAssign owners and delivery milestones\nRequest agenda additions by Thursday",
-  );
-  const [tone, setTone] = useState<Tone>("Formal");
-  const [output, setOutput] = useState(emailVersions.Formal[0] ?? "");
+function EmailGenerator({ defaultTone }: { defaultTone: Tone }) {
+  const [recipient, setRecipient] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [points, setPoints] = useState("");
+  const [tone, setTone] = useState<Tone>(defaultTone);
+  const [output, setOutput] = useState("");
   const [version, setVersion] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -501,7 +584,7 @@ function EmailGenerator() {
     window.setTimeout(() => {
       const next = regenerate ? (version + 1) % 2 : version;
       setVersion(next);
-      setOutput(emailVersions[tone][next] ?? emailVersions[tone][0] ?? "");
+      setOutput(createEmailDraft(recipient, purpose, points, tone, next));
       setGenerating(false);
     }, 650);
   };
@@ -568,7 +651,7 @@ function EmailGenerator() {
             </div>
             <Button
               className="w-full"
-              disabled={!recipient || !purpose || generating}
+               disabled={!recipient.trim() || !purpose.trim() || !points.trim() || generating}
               onClick={() => generate()}
             >
               {generating ? (
@@ -590,7 +673,12 @@ function EmailGenerator() {
               <p className="text-xs text-muted-foreground">Editable draft · {tone} tone</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => copyText(output, setCopied)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyText(output, setCopied)}
+                disabled={!output}
+              >
                 {copied ? <Check /> : <Copy />}
                 {copied ? "Copied" : "Copy"}
               </Button>
@@ -598,18 +686,26 @@ function EmailGenerator() {
                 variant="outline"
                 size="sm"
                 onClick={() => generate(true)}
-                disabled={generating}
+                disabled={generating || !output}
               >
                 <RefreshCw /> Regenerate
               </Button>
             </div>
           </div>
-          <textarea
-            aria-label="Generated email"
-            className="min-h-[510px] flex-1 resize-none bg-transparent p-6 text-sm leading-7 text-foreground outline-none sm:p-8"
-            value={output}
-            onChange={(e) => setOutput(e.target.value)}
-          />
+          {output ? (
+            <textarea
+              aria-label="Generated email"
+              className="min-h-[510px] flex-1 resize-none bg-transparent p-6 text-sm leading-7 text-foreground outline-none sm:p-8"
+              value={output}
+              onChange={(e) => setOutput(e.target.value)}
+            />
+          ) : (
+            <EmptyOutput
+              icon={Mail}
+              title="Your email will appear here"
+              description="Add a recipient, purpose, and key points, then generate an editable draft."
+            />
+          )}
         </section>
       </div>
       <Disclaimer />
@@ -617,14 +713,10 @@ function EmailGenerator() {
   );
 }
 
-function ResearchAssistant() {
+function ResearchAssistant({ responseDetail }: { responseDetail: ResponseDetail }) {
   const [sourceType, setSourceType] = useState("Topic");
-  const [input, setInput] = useState(
-    "How hybrid work policies affect team productivity and employee engagement",
-  );
-  const [result, setResult] = useState<ResearchResult>(
-    researchVersions[0] ?? { summary: "", insights: [], recommendations: [] },
-  );
+  const [input, setInput] = useState("");
+  const [result, setResult] = useState<ResearchResult | null>(null);
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -632,13 +724,14 @@ function ResearchAssistant() {
     setLoading(true);
     window.setTimeout(() => {
       const next = regen ? (version + 1) % researchVersions.length : version;
-      const nextResult = researchVersions[next];
-      if (nextResult) setResult(nextResult);
+      setResult(createResearchResult(input, sourceType, next, responseDetail));
       setVersion(next);
       setLoading(false);
     }, 750);
   };
-  const allText = `${result.summary}\n\nKey insights\n${result.insights.join("\n")}\n\nRecommendations\n${result.recommendations.join("\n")}`;
+  const allText = result
+    ? `${result.summary}\n\nKey insights\n${result.insights.join("\n")}\n\nRecommendations\n${result.recommendations.join("\n")}`
+    : "";
   return (
     <div>
       <PageIntro
@@ -665,16 +758,25 @@ function ResearchAssistant() {
           </div>
           <div>
             <FieldLabel>{sourceType}</FieldLabel>
-            <input
-              className={fieldClass}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                sourceType === "Website URL"
-                  ? "https://example.com/article"
-                  : "Paste or describe what you want to analyze"
-              }
-            />
+            {sourceType === "Article" ? (
+              <textarea
+                className={`${fieldClass} min-h-24 resize-y`}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Paste the article text"
+              />
+            ) : (
+              <input
+                className={fieldClass}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={
+                  sourceType === "Website URL"
+                    ? "https://example.com/article"
+                    : "Describe the topic you want to analyze"
+                }
+              />
+            )}
           </div>
           <Button className="h-11" disabled={!input || loading} onClick={() => generate()}>
             {loading ? (
@@ -695,36 +797,56 @@ function ResearchAssistant() {
           <p className="text-xs text-muted-foreground">Synthesized for workplace decision-making</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => copyText(allText, setCopied)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => copyText(allText, setCopied)}
+            disabled={!result}
+          >
             {copied ? <Check /> : <Copy />}
             {copied ? "Copied" : "Copy all"}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => generate(true)} disabled={loading}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => generate(true)}
+            disabled={loading || !result}
+          >
             <RefreshCw /> Regenerate
           </Button>
         </div>
       </div>
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <EditableResearchCard
-          icon={FileText}
-          title="Executive summary"
-          value={result.summary}
-          onChange={(value) => setResult({ ...result, summary: value })}
-          wide
-        />
-        <ListResearchCard
-          icon={Lightbulb}
-          title="Key insights"
-          items={result.insights}
-          onChange={(insights) => setResult({ ...result, insights })}
-        />
-        <ListResearchCard
-          icon={Target}
-          title="Practical recommendations"
-          items={result.recommendations}
-          onChange={(recommendations) => setResult({ ...result, recommendations })}
-        />
-      </div>
+      {result ? (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <EditableResearchCard
+            icon={FileText}
+            title="Executive summary"
+            value={result.summary}
+            onChange={(value) => setResult({ ...result, summary: value })}
+            wide
+          />
+          <ListResearchCard
+            icon={Lightbulb}
+            title="Key insights"
+            items={result.insights}
+            onChange={(insights) => setResult({ ...result, insights })}
+          />
+          <ListResearchCard
+            icon={Target}
+            title="Practical recommendations"
+            items={result.recommendations}
+            onChange={(recommendations) => setResult({ ...result, recommendations })}
+          />
+        </div>
+      ) : (
+        <div className="mt-4 min-h-80 rounded-lg border border-dashed border-border bg-card">
+          <EmptyOutput
+            icon={Search}
+            title="Your research brief will appear here"
+            description="Choose a source, add your own material, and analyze it for clear insights and recommendations."
+          />
+        </div>
+      )}
       <Disclaimer />
     </div>
   );
@@ -799,7 +921,7 @@ function ListResearchCard({
   );
 }
 
-function Chatbot() {
+function Chatbot({ responseDetail }: { responseDetail: ResponseDetail }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 1,
@@ -822,7 +944,7 @@ function Chatbot() {
     window.setTimeout(() => {
       setMessages((old) => [
         ...old,
-        { id: Date.now() + 1, role: "assistant", text: answerFor(clean) },
+        { id: Date.now() + 1, role: "assistant", text: answerFor(clean, responseDetail) },
       ]);
       setStatus("ready");
     }, 850);
