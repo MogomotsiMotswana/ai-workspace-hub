@@ -46,6 +46,7 @@ import brandMark from "@/assets/workplace-ai-mark.png";
 type View = "dashboard" | "email" | "research" | "chat";
 type Tone = "Formal" | "Friendly" | "Persuasive";
 type ChatMessage = { id: number; role: "user" | "assistant"; text: string };
+type ResearchResult = { summary: string; insights: string[]; recommendations: string[] };
 
 const navItems: Array<{ id: View; label: string; short: string; icon: ComponentType<{ className?: string }> }> = [
   { id: "dashboard", label: "Dashboard", short: "Home", icon: LayoutDashboard },
@@ -233,11 +234,11 @@ function EmailGenerator() {
   const [purpose, setPurpose] = useState("Prepare for our Q4 planning session");
   const [points, setPoints] = useState("Review current performance\nAgree on our top three priorities\nAssign owners and delivery milestones\nRequest agenda additions by Thursday");
   const [tone, setTone] = useState<Tone>("Formal");
-  const [output, setOutput] = useState(emailVersions.Formal[0]);
+  const [output, setOutput] = useState(emailVersions.Formal[0] ?? "");
   const [version, setVersion] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
-  const generate = (regenerate = false) => { setGenerating(true); window.setTimeout(() => { const next = regenerate ? (version + 1) % 2 : version; setVersion(next); setOutput(emailVersions[tone][next]); setGenerating(false); }, 650); };
+  const generate = (regenerate = false) => { setGenerating(true); window.setTimeout(() => { const next = regenerate ? (version + 1) % 2 : version; setVersion(next); setOutput(emailVersions[tone][next] ?? emailVersions[tone][0] ?? ""); setGenerating(false); }, 650); };
   return <div><PageIntro eyebrow="Communication" title="Write emails people act on." description="Provide the situation and the assistant will shape it into a clear, professional message you can edit." />
     <div className="grid gap-5 xl:grid-cols-[0.78fr_1.22fr]">
       <section className="rounded-lg border border-border bg-card p-5 panel-shadow sm:p-6"><div className="mb-6 flex items-center gap-3"><div className="rounded-md bg-secondary p-2 text-primary"><Mail /></div><div><h2 className="font-bold">Email brief</h2><p className="text-xs text-muted-foreground">Add the details that matter</p></div></div>
@@ -250,11 +251,11 @@ function EmailGenerator() {
 function ResearchAssistant() {
   const [sourceType, setSourceType] = useState("Topic");
   const [input, setInput] = useState("How hybrid work policies affect team productivity and employee engagement");
-  const [result, setResult] = useState(researchVersions[0]);
+  const [result, setResult] = useState<ResearchResult>(researchVersions[0] ?? { summary: "", insights: [], recommendations: [] });
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const generate = (regen = false) => { setLoading(true); window.setTimeout(() => { const next = regen ? (version + 1) % researchVersions.length : version; setVersion(next); setResult(researchVersions[next]); setLoading(false); }, 750); };
+  const generate = (regen = false) => { setLoading(true); window.setTimeout(() => { const next = regen ? (version + 1) % researchVersions.length : version; const nextResult = researchVersions[next]; if (nextResult) setResult(nextResult); setVersion(next); setLoading(false); }, 750); };
   const allText = `${result.summary}\n\nKey insights\n${result.insights.join("\n")}\n\nRecommendations\n${result.recommendations.join("\n")}`;
   return <div><PageIntro eyebrow="Analysis" title="Turn information into direction." description="Explore a topic, article, or website and get the practical takeaways—not another wall of text." />
     <section className="rounded-lg border border-border bg-card p-5 panel-shadow sm:p-6"><div className="grid gap-5 lg:grid-cols-[auto_1fr_auto] lg:items-end"><div><FieldLabel>Source type</FieldLabel><div className="flex rounded-md bg-secondary p-1">{["Topic", "Article", "Website URL"].map((item) => <Button key={item} size="sm" variant={sourceType === item ? "default" : "ghost"} onClick={() => setSourceType(item)}>{item}</Button>)}</div></div><div><FieldLabel>{sourceType}</FieldLabel><input className={fieldClass} value={input} onChange={(e) => setInput(e.target.value)} placeholder={sourceType === "Website URL" ? "https://example.com/article" : "Paste or describe what you want to analyze"} /></div><Button className="h-11" disabled={!input || loading} onClick={() => generate()}>{loading ? <><RefreshCw className="animate-spin" /> Analyzing…</> : <><Search /> Analyze</>}</Button></div></section>
