@@ -65,52 +65,6 @@ const navItems: Array<{
   { id: "settings", label: "Settings", short: "Settings", icon: SettingsIcon },
 ];
 
-const emailVersions: Record<Tone, string[]> = {
-  Formal: [
-    "Subject: Q4 Planning Session — Proposed Agenda and Next Steps\n\nHi Priya,\n\nI’m writing to align on our upcoming Q4 planning session. To make the discussion focused and productive, I propose that we review current performance, confirm the three highest-priority initiatives, and assign owners with clear delivery milestones.\n\nPlease share any additional agenda items by Thursday afternoon. I’ll circulate the final agenda and pre-read on Friday so everyone has sufficient time to prepare.\n\nBest regards,\nAlex",
-    "Subject: Preparation for Our Q4 Planning Session\n\nDear Priya,\n\nAhead of our Q4 planning session, I would like to confirm the proposed focus areas: reviewing current performance, agreeing on three priority initiatives, and establishing accountable owners and milestones.\n\nIf there are further topics you would like included, please send them by Thursday afternoon. The final agenda and supporting materials will follow on Friday.\n\nKind regards,\nAlex",
-  ],
-  Friendly: [
-    "Subject: Let’s make our Q4 planning session count\n\nHi Priya,\n\nI’m looking forward to our Q4 planning session. I’d love for us to use the time to look at what’s working, agree on our top three priorities, and leave with clear owners and milestones.\n\nCould you send over any extra agenda items by Thursday afternoon? I’ll pull everything into a short pre-read and share it on Friday.\n\nThanks,\nAlex",
-    "Subject: Quick prep for Q4 planning\n\nHi Priya,\n\nA quick note before our Q4 planning session: I’m planning to cover performance so far, our three biggest priorities, and who will own each next step. That should help us finish with a practical plan rather than a long wish list.\n\nSend me anything else you’d like covered by Thursday, and I’ll share the final pre-read Friday.\n\nThanks,\nAlex",
-  ],
-  Persuasive: [
-    "Subject: A focused plan to accelerate Q4 results\n\nHi Priya,\n\nOur Q4 planning session is an opportunity to turn the strongest ideas into measurable progress. I recommend we focus the meeting on three decisions: which initiatives will create the most impact, who will own each outcome, and what milestones will keep delivery on track.\n\nPlease share any essential agenda additions by Thursday afternoon. I’ll circulate a concise pre-read on Friday so we can use the session for decisions—not status updates.\n\nBest,\nAlex",
-    "Subject: Turning Q4 priorities into accountable action\n\nHi Priya,\n\nTo give Q4 the strongest possible start, I propose we use our planning session to select three high-impact priorities and translate each into a named owner, measurable outcome, and delivery milestone. This structure will help us move quickly and protect the team from competing demands.\n\nPlease send critical additions by Thursday. I’ll share the final decision-focused agenda on Friday.\n\nBest,\nAlex",
-  ],
-};
-
-const researchVersions = [
-  {
-    summary:
-      "Hybrid teams perform best when flexibility is paired with explicit coordination. The strongest evidence favors role-based office rhythms, protected focus time, and shared documentation over blanket attendance mandates.",
-    insights: [
-      "Teams with agreed collaboration windows report fewer scheduling delays than teams with fully ad hoc attendance.",
-      "Written decision records reduce repeated discussions and help remote colleagues contribute asynchronously.",
-      "Managers—not policy alone—have the largest influence on whether hybrid employees feel included and informed.",
-    ],
-    recommendations: [
-      "Set two team anchor windows each week for work that benefits from live collaboration.",
-      "Publish decisions, owners, and deadlines in one shared workspace within 24 hours.",
-      "Review meeting load and employee sentiment after six weeks, then adjust by team needs.",
-    ],
-  },
-  {
-    summary:
-      "Effective hybrid work is less about location and more about operating clarity. Teams see better outcomes when they define which activities require synchronous collaboration and design the rest for asynchronous progress.",
-    insights: [
-      "Unclear availability norms create more friction than physical distance.",
-      "Smaller, decision-led meetings outperform broad recurring status calls.",
-      "Consistent access to context is a leading predictor of perceived fairness across locations.",
-    ],
-    recommendations: [
-      "Create a simple team charter covering response times, focus hours, and decision paths.",
-      "Replace one weekly status meeting with an asynchronous written update.",
-      "Track delivery speed and inclusion indicators instead of office attendance alone.",
-    ],
-  },
-];
-
 const suggestedPrompts = [
   "Help me prioritize a busy week",
   "Draft an agenda for a difficult meeting",
@@ -570,6 +524,26 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 const fieldClass =
   "w-full rounded-md border border-input bg-background px-3.5 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/20";
 
+function EmptyOutput({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex min-h-80 flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="mb-4 flex size-12 items-center justify-center rounded-lg border border-border bg-secondary text-primary">
+        <Icon className="size-5" />
+      </div>
+      <h3 className="font-bold">{title}</h3>
+      <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
 function EmailGenerator({ defaultTone }: { defaultTone: Tone }) {
   const [recipient, setRecipient] = useState("");
   const [purpose, setPurpose] = useState("");
@@ -749,7 +723,12 @@ function ResearchAssistant({ responseDetail }: { responseDetail: ResponseDetail 
                   key={item}
                   size="sm"
                   variant={sourceType === item ? "default" : "ghost"}
-                  onClick={() => setSourceType(item)}
+                  onClick={() => {
+                    setSourceType(item);
+                    setInput("");
+                    setResult(null);
+                    setVersion(0);
+                  }}
                 >
                   {item}
                 </Button>
@@ -1073,6 +1052,96 @@ function Chatbot({ responseDetail }: { responseDetail: ResponseDetail }) {
           </div>
         </div>
       </div>
+      <Disclaimer />
+    </div>
+  );
+}
+
+function SettingsView({
+  defaultTone,
+  onToneChange,
+  responseDetail,
+  onDetailChange,
+}: {
+  defaultTone: Tone;
+  onToneChange: (tone: Tone) => void;
+  responseDetail: ResponseDetail;
+  onDetailChange: (detail: ResponseDetail) => void;
+}) {
+  return (
+    <div>
+      <PageIntro
+        eyebrow="Preferences"
+        title="Shape your workspace."
+        description="Choose how new drafts and responses begin. These preferences apply only while this page remains open."
+      />
+      <div className="grid gap-5 xl:grid-cols-2">
+        <section className="rounded-lg border border-border bg-card p-5 panel-shadow sm:p-6">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="rounded-md bg-secondary p-2 text-primary">
+              <Mail className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-bold">Email preference</h2>
+              <p className="text-xs text-muted-foreground">Default tone for new email briefs</p>
+            </div>
+          </div>
+          <FieldLabel>Default tone</FieldLabel>
+          <div className="grid grid-cols-3 gap-2">
+            {(["Formal", "Friendly", "Persuasive"] as Tone[]).map((tone) => (
+              <Button
+                key={tone}
+                variant={defaultTone === tone ? "default" : "outline"}
+                onClick={() => onToneChange(tone)}
+              >
+                {tone}
+              </Button>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-border bg-card p-5 panel-shadow sm:p-6">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="rounded-md bg-secondary p-2 text-primary">
+              <SlidersHorizontal className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-bold">Response detail</h2>
+              <p className="text-xs text-muted-foreground">Used by research and workplace chat</p>
+            </div>
+          </div>
+          <FieldLabel>Preferred length</FieldLabel>
+          <div className="grid grid-cols-3 gap-2">
+            {(["Concise", "Balanced", "Detailed"] as ResponseDetail[]).map((detail) => (
+              <Button
+                key={detail}
+                variant={responseDetail === detail ? "default" : "outline"}
+                onClick={() => onDetailChange(detail)}
+              >
+                {detail}
+              </Button>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <section className="mt-5 flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex items-start gap-3">
+          <div className="rounded-md bg-secondary p-2 text-primary">
+            <Trash2 className="size-5" />
+          </div>
+          <div>
+            <h2 className="font-bold">Session data</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Drafts and conversations are temporary and clear automatically when you refresh or close
+              the page.
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 rounded-md border border-border bg-secondary px-3 py-2 text-xs font-semibold text-muted-foreground">
+          Nothing is stored
+        </span>
+      </section>
       <Disclaimer />
     </div>
   );
