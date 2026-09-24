@@ -18,7 +18,10 @@ import {
   RefreshCw,
   Search,
   Send,
+  Settings as SettingsIcon,
+  SlidersHorizontal,
   Target,
+  Trash2,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,8 +46,9 @@ import {
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import brandMark from "@/assets/workplace-ai-mark.png";
 
-type View = "dashboard" | "email" | "research" | "chat";
+type View = "dashboard" | "email" | "research" | "chat" | "settings";
 type Tone = "Formal" | "Friendly" | "Persuasive";
+type ResponseDetail = "Concise" | "Balanced" | "Detailed";
 type ChatMessage = { id: number; role: "user" | "assistant"; text: string };
 type ResearchResult = { summary: string; insights: string[]; recommendations: string[] };
 
@@ -58,52 +62,7 @@ const navItems: Array<{
   { id: "email", label: "Smart Email Generator", short: "Email", icon: Mail },
   { id: "research", label: "AI Research Assistant", short: "Research", icon: Search },
   { id: "chat", label: "AI Chatbot", short: "Chat", icon: Bot },
-];
-
-const emailVersions: Record<Tone, string[]> = {
-  Formal: [
-    "Subject: Q4 Planning Session — Proposed Agenda and Next Steps\n\nHi Priya,\n\nI’m writing to align on our upcoming Q4 planning session. To make the discussion focused and productive, I propose that we review current performance, confirm the three highest-priority initiatives, and assign owners with clear delivery milestones.\n\nPlease share any additional agenda items by Thursday afternoon. I’ll circulate the final agenda and pre-read on Friday so everyone has sufficient time to prepare.\n\nBest regards,\nAlex",
-    "Subject: Preparation for Our Q4 Planning Session\n\nDear Priya,\n\nAhead of our Q4 planning session, I would like to confirm the proposed focus areas: reviewing current performance, agreeing on three priority initiatives, and establishing accountable owners and milestones.\n\nIf there are further topics you would like included, please send them by Thursday afternoon. The final agenda and supporting materials will follow on Friday.\n\nKind regards,\nAlex",
-  ],
-  Friendly: [
-    "Subject: Let’s make our Q4 planning session count\n\nHi Priya,\n\nI’m looking forward to our Q4 planning session. I’d love for us to use the time to look at what’s working, agree on our top three priorities, and leave with clear owners and milestones.\n\nCould you send over any extra agenda items by Thursday afternoon? I’ll pull everything into a short pre-read and share it on Friday.\n\nThanks,\nAlex",
-    "Subject: Quick prep for Q4 planning\n\nHi Priya,\n\nA quick note before our Q4 planning session: I’m planning to cover performance so far, our three biggest priorities, and who will own each next step. That should help us finish with a practical plan rather than a long wish list.\n\nSend me anything else you’d like covered by Thursday, and I’ll share the final pre-read Friday.\n\nThanks,\nAlex",
-  ],
-  Persuasive: [
-    "Subject: A focused plan to accelerate Q4 results\n\nHi Priya,\n\nOur Q4 planning session is an opportunity to turn the strongest ideas into measurable progress. I recommend we focus the meeting on three decisions: which initiatives will create the most impact, who will own each outcome, and what milestones will keep delivery on track.\n\nPlease share any essential agenda additions by Thursday afternoon. I’ll circulate a concise pre-read on Friday so we can use the session for decisions—not status updates.\n\nBest,\nAlex",
-    "Subject: Turning Q4 priorities into accountable action\n\nHi Priya,\n\nTo give Q4 the strongest possible start, I propose we use our planning session to select three high-impact priorities and translate each into a named owner, measurable outcome, and delivery milestone. This structure will help us move quickly and protect the team from competing demands.\n\nPlease send critical additions by Thursday. I’ll share the final decision-focused agenda on Friday.\n\nBest,\nAlex",
-  ],
-};
-
-const researchVersions = [
-  {
-    summary:
-      "Hybrid teams perform best when flexibility is paired with explicit coordination. The strongest evidence favors role-based office rhythms, protected focus time, and shared documentation over blanket attendance mandates.",
-    insights: [
-      "Teams with agreed collaboration windows report fewer scheduling delays than teams with fully ad hoc attendance.",
-      "Written decision records reduce repeated discussions and help remote colleagues contribute asynchronously.",
-      "Managers—not policy alone—have the largest influence on whether hybrid employees feel included and informed.",
-    ],
-    recommendations: [
-      "Set two team anchor windows each week for work that benefits from live collaboration.",
-      "Publish decisions, owners, and deadlines in one shared workspace within 24 hours.",
-      "Review meeting load and employee sentiment after six weeks, then adjust by team needs.",
-    ],
-  },
-  {
-    summary:
-      "Effective hybrid work is less about location and more about operating clarity. Teams see better outcomes when they define which activities require synchronous collaboration and design the rest for asynchronous progress.",
-    insights: [
-      "Unclear availability norms create more friction than physical distance.",
-      "Smaller, decision-led meetings outperform broad recurring status calls.",
-      "Consistent access to context is a leading predictor of perceived fairness across locations.",
-    ],
-    recommendations: [
-      "Create a simple team charter covering response times, focus hours, and decision paths.",
-      "Replace one weekly status meeting with an asynchronous written update.",
-      "Track delivery speed and inclusion indicators instead of office attendance alone.",
-    ],
-  },
+  { id: "settings", label: "Settings", short: "Settings", icon: SettingsIcon },
 ];
 
 const suggestedPrompts = [
@@ -112,15 +71,86 @@ const suggestedPrompts = [
   "How can I give clearer feedback?",
 ];
 
-function answerFor(prompt: string) {
+function answerFor(prompt: string, detail: ResponseDetail) {
   const lower = prompt.toLowerCase();
+  let response: string;
   if (lower.includes("priorit"))
-    return "Here’s a practical way to reset the week:\n\n1. **Choose three outcomes** that would make Friday feel successful.\n2. **Separate urgent from important**—move low-impact requests to a later list.\n3. **Protect two 60-minute focus blocks** for your highest-value task.\n4. **Send one expectation-setting note** to anyone affected by a changed deadline.\n\nStart with the outcome that removes the biggest blocker for other people.";
-  if (lower.includes("agenda") || lower.includes("meeting"))
-    return "Use a decision-led agenda:\n\n- **5 min:** State the decision required and the shared goal\n- **10 min:** Confirm facts and constraints—no debate yet\n- **20 min:** Compare 2–3 viable options\n- **10 min:** Decide, assign an owner, and set a date\n- **5 min:** Capture risks and communication steps\n\nSend the decision question in advance so participants arrive prepared rather than discovering the issue in the room.";
-  if (lower.includes("feedback"))
-    return "Try a clear, low-defensiveness structure: **observation → impact → request**.\n\n> “In the last two project updates, the risk section arrived after the review. That left the team little time to respond. For the next update, could you flag risks by Tuesday noon—even if the details are still developing?”\n\nKeep it specific, discuss the work rather than the person, and invite their perspective before agreeing on the next step.";
-  return `A useful way to approach **${prompt}** is to define the outcome first, identify the smallest next decision, and make ownership explicit.\n\nI’d suggest:\n1. Write the desired result in one sentence.\n2. List the two constraints that matter most.\n3. Choose one action you can complete today.\n4. Tell affected colleagues what will happen next and when.\n\nThis keeps the work actionable without over-planning.`;
+    response =
+      "Here’s a practical way to reset the week:\n\n1. **Choose three outcomes** that would make Friday feel successful.\n2. **Separate urgent from important**—move low-impact requests to a later list.\n3. **Protect two 60-minute focus blocks** for your highest-value task.\n4. **Send one expectation-setting note** to anyone affected by a changed deadline.\n\nStart with the outcome that removes the biggest blocker for other people.";
+  else if (lower.includes("agenda") || lower.includes("meeting"))
+    response =
+      "Use a decision-led agenda:\n\n- **5 min:** State the decision required and the shared goal\n- **10 min:** Confirm facts and constraints—no debate yet\n- **20 min:** Compare 2–3 viable options\n- **10 min:** Decide, assign an owner, and set a date\n- **5 min:** Capture risks and communication steps\n\nSend the decision question in advance so participants arrive prepared rather than discovering the issue in the room.";
+  else if (lower.includes("feedback"))
+    response =
+      "Try a clear, low-defensiveness structure: **observation → impact → request**.\n\n> “In the last two project updates, the risk section arrived after the review. That left the team little time to respond. For the next update, could you flag risks by Tuesday noon—even if the details are still developing?”\n\nKeep it specific, discuss the work rather than the person, and invite their perspective before agreeing on the next step.";
+  else
+    response = `A useful way to approach **${prompt}** is to define the outcome first, identify the smallest next decision, and make ownership explicit.\n\nI’d suggest:\n1. Write the desired result in one sentence.\n2. List the two constraints that matter most.\n3. Choose one action you can complete today.\n4. Tell affected colleagues what will happen next and when.\n\nThis keeps the work actionable without over-planning.`;
+
+  if (detail === "Concise") return response.split("\n\n").slice(0, 2).join("\n\n");
+  if (detail === "Detailed")
+    return `${response}\n\n**A useful next step:** Put the first action on your calendar, then define what “done” looks like before you begin.`;
+  return response;
+}
+
+function createEmailDraft(
+  recipient: string,
+  purpose: string,
+  points: string,
+  tone: Tone,
+  version: number,
+) {
+  const name = recipient.split(",")[0]?.trim() || recipient.trim();
+  const items = points
+    .split("\n")
+    .map((point) => point.trim())
+    .filter(Boolean);
+  const subject = purpose.replace(/[.!?]+$/, "");
+  const formattedPoints = items.map((point) => `• ${point}`).join("\n");
+  const opening =
+    tone === "Friendly"
+      ? `I hope you’re doing well. I wanted to reach out about ${purpose.toLowerCase()}.`
+      : tone === "Persuasive"
+        ? `${purpose} presents a valuable opportunity to create clear, measurable progress.`
+        : `I’m writing regarding ${purpose.toLowerCase()}.`;
+  const close =
+    tone === "Friendly"
+      ? "Let me know what you think, and I’ll take care of the next steps.\n\nThanks,"
+      : tone === "Persuasive"
+        ? "I recommend we align on these points now so we can move forward with confidence. Please share your thoughts.\n\nBest,"
+        : "Please review the points above and share any feedback or additions.\n\nKind regards,";
+  const alternate = version % 2 === 1 ? "Proposed next steps" : "Key points";
+  return `Subject: ${subject}${version % 2 === 1 ? " — next steps" : ""}\n\nHi ${name},\n\n${opening}\n\n${alternate}:\n${formattedPoints}\n\n${close}`;
+}
+
+function createResearchResult(
+  input: string,
+  sourceType: string,
+  version: number,
+  detail: ResponseDetail,
+): ResearchResult {
+  const clean = input.replace(/\s+/g, " ").trim();
+  const subject = clean.length > 100 ? `${clean.slice(0, 97)}…` : clean;
+  const source = sourceType === "Website URL" ? "the supplied website" : sourceType.toLowerCase();
+  const extra =
+    detail === "Detailed"
+      ? " The evidence should be tested against team size, role requirements, and existing operating norms before broad adoption."
+      : "";
+  return {
+    summary:
+      version % 2 === 0
+        ? `This ${source} examines ${subject}. The central takeaway is that successful implementation depends on clear ownership, measurable outcomes, and consistent communication rather than policy alone.${extra}`
+        : `A practical reading of ${subject} suggests that focused experiments are more useful than an immediate organisation-wide change. Teams should define the intended outcome, test the approach, and review evidence before scaling.${extra}`,
+    insights: [
+      `The strongest decisions connect “${subject}” to a specific workplace outcome rather than treating it as a standalone initiative.`,
+      "Clear expectations and visible ownership reduce execution gaps between planning and delivery.",
+      "A short review cycle makes it easier to identify unintended effects and adjust before they become embedded.",
+    ],
+    recommendations: [
+      "Define one measurable outcome and the person accountable for reporting progress.",
+      "Run a time-bound pilot with a representative team and document decisions as they are made.",
+      "Review results with affected colleagues, then keep, revise, or stop the approach based on evidence.",
+    ],
+  };
 }
 
 function copyText(text: string, setCopied: (value: boolean) => void) {
@@ -133,6 +163,8 @@ function WorkplaceApp() {
   const [view, setView] = useState<View>("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [defaultTone, setDefaultTone] = useState<Tone>("Formal");
+  const [responseDetail, setResponseDetail] = useState<ResponseDetail>("Balanced");
 
   const selectView = (next: View) => {
     setView(next);
@@ -217,7 +249,9 @@ function WorkplaceApp() {
                     ? "AI Research Assistant"
                     : view === "chat"
                       ? "AI Chatbot"
-                      : "Dashboard"}
+                      : view === "settings"
+                        ? "Settings"
+                        : "Dashboard"}
               </p>
               <p className="hidden text-xs text-muted-foreground sm:block">
                 Your focused workspace for better work
@@ -231,13 +265,21 @@ function WorkplaceApp() {
 
         <main className="mx-auto max-w-[1440px] p-4 pb-24 sm:p-7 lg:p-9">
           {view === "dashboard" && <Dashboard onSelect={selectView} />}
-          {view === "email" && <EmailGenerator />}
-          {view === "research" && <ResearchAssistant />}
-          {view === "chat" && <Chatbot />}
+          {view === "email" && <EmailGenerator defaultTone={defaultTone} />}
+          {view === "research" && <ResearchAssistant responseDetail={responseDetail} />}
+          {view === "chat" && <Chatbot responseDetail={responseDetail} />}
+          {view === "settings" && (
+            <SettingsView
+              defaultTone={defaultTone}
+              onToneChange={setDefaultTone}
+              responseDetail={responseDetail}
+              onDetailChange={setResponseDetail}
+            />
+          )}
         </main>
       </div>
 
-      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-4 rounded-xl border border-border bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl lg:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 rounded-xl border border-border bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl lg:hidden">
         {navItems.map((item) => (
           <Button
             key={item.id}
@@ -485,14 +527,32 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 const fieldClass =
   "w-full rounded-md border border-input bg-background px-3.5 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-primary/20";
 
-function EmailGenerator() {
-  const [recipient, setRecipient] = useState("Priya, Head of Operations");
-  const [purpose, setPurpose] = useState("Prepare for our Q4 planning session");
-  const [points, setPoints] = useState(
-    "Review current performance\nAgree on our top three priorities\nAssign owners and delivery milestones\nRequest agenda additions by Thursday",
+function EmptyOutput({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex min-h-80 flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="mb-4 flex size-12 items-center justify-center rounded-lg border border-border bg-secondary text-primary">
+        <Icon className="size-5" />
+      </div>
+      <h3 className="font-bold">{title}</h3>
+      <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p>
+    </div>
   );
-  const [tone, setTone] = useState<Tone>("Formal");
-  const [output, setOutput] = useState(emailVersions.Formal[0] ?? "");
+}
+
+function EmailGenerator({ defaultTone }: { defaultTone: Tone }) {
+  const [recipient, setRecipient] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [points, setPoints] = useState("");
+  const [tone, setTone] = useState<Tone>(defaultTone);
+  const [output, setOutput] = useState("");
   const [version, setVersion] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -501,7 +561,7 @@ function EmailGenerator() {
     window.setTimeout(() => {
       const next = regenerate ? (version + 1) % 2 : version;
       setVersion(next);
-      setOutput(emailVersions[tone][next] ?? emailVersions[tone][0] ?? "");
+      setOutput(createEmailDraft(recipient, purpose, points, tone, next));
       setGenerating(false);
     }, 650);
   };
@@ -568,7 +628,7 @@ function EmailGenerator() {
             </div>
             <Button
               className="w-full"
-              disabled={!recipient || !purpose || generating}
+              disabled={!recipient.trim() || !purpose.trim() || !points.trim() || generating}
               onClick={() => generate()}
             >
               {generating ? (
@@ -590,7 +650,12 @@ function EmailGenerator() {
               <p className="text-xs text-muted-foreground">Editable draft · {tone} tone</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => copyText(output, setCopied)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyText(output, setCopied)}
+                disabled={!output}
+              >
                 {copied ? <Check /> : <Copy />}
                 {copied ? "Copied" : "Copy"}
               </Button>
@@ -598,18 +663,26 @@ function EmailGenerator() {
                 variant="outline"
                 size="sm"
                 onClick={() => generate(true)}
-                disabled={generating}
+                disabled={generating || !output}
               >
                 <RefreshCw /> Regenerate
               </Button>
             </div>
           </div>
-          <textarea
-            aria-label="Generated email"
-            className="min-h-[510px] flex-1 resize-none bg-transparent p-6 text-sm leading-7 text-foreground outline-none sm:p-8"
-            value={output}
-            onChange={(e) => setOutput(e.target.value)}
-          />
+          {output ? (
+            <textarea
+              aria-label="Generated email"
+              className="min-h-[510px] flex-1 resize-none bg-transparent p-6 text-sm leading-7 text-foreground outline-none sm:p-8"
+              value={output}
+              onChange={(e) => setOutput(e.target.value)}
+            />
+          ) : (
+            <EmptyOutput
+              icon={Mail}
+              title="Your email will appear here"
+              description="Add a recipient, purpose, and key points, then generate an editable draft."
+            />
+          )}
         </section>
       </div>
       <Disclaimer />
@@ -617,14 +690,10 @@ function EmailGenerator() {
   );
 }
 
-function ResearchAssistant() {
+function ResearchAssistant({ responseDetail }: { responseDetail: ResponseDetail }) {
   const [sourceType, setSourceType] = useState("Topic");
-  const [input, setInput] = useState(
-    "How hybrid work policies affect team productivity and employee engagement",
-  );
-  const [result, setResult] = useState<ResearchResult>(
-    researchVersions[0] ?? { summary: "", insights: [], recommendations: [] },
-  );
+  const [input, setInput] = useState("");
+  const [result, setResult] = useState<ResearchResult | null>(null);
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -632,13 +701,14 @@ function ResearchAssistant() {
     setLoading(true);
     window.setTimeout(() => {
       const next = regen ? (version + 1) % researchVersions.length : version;
-      const nextResult = researchVersions[next];
-      if (nextResult) setResult(nextResult);
+      setResult(createResearchResult(input, sourceType, next, responseDetail));
       setVersion(next);
       setLoading(false);
     }, 750);
   };
-  const allText = `${result.summary}\n\nKey insights\n${result.insights.join("\n")}\n\nRecommendations\n${result.recommendations.join("\n")}`;
+  const allText = result
+    ? `${result.summary}\n\nKey insights\n${result.insights.join("\n")}\n\nRecommendations\n${result.recommendations.join("\n")}`
+    : "";
   return (
     <div>
       <PageIntro
@@ -656,7 +726,12 @@ function ResearchAssistant() {
                   key={item}
                   size="sm"
                   variant={sourceType === item ? "default" : "ghost"}
-                  onClick={() => setSourceType(item)}
+                  onClick={() => {
+                    setSourceType(item);
+                    setInput("");
+                    setResult(null);
+                    setVersion(0);
+                  }}
                 >
                   {item}
                 </Button>
@@ -665,16 +740,25 @@ function ResearchAssistant() {
           </div>
           <div>
             <FieldLabel>{sourceType}</FieldLabel>
-            <input
-              className={fieldClass}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={
-                sourceType === "Website URL"
-                  ? "https://example.com/article"
-                  : "Paste or describe what you want to analyze"
-              }
-            />
+            {sourceType === "Article" ? (
+              <textarea
+                className={`${fieldClass} min-h-24 resize-y`}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Paste the article text"
+              />
+            ) : (
+              <input
+                className={fieldClass}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={
+                  sourceType === "Website URL"
+                    ? "https://example.com/article"
+                    : "Describe the topic you want to analyze"
+                }
+              />
+            )}
           </div>
           <Button className="h-11" disabled={!input || loading} onClick={() => generate()}>
             {loading ? (
@@ -695,36 +779,56 @@ function ResearchAssistant() {
           <p className="text-xs text-muted-foreground">Synthesized for workplace decision-making</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => copyText(allText, setCopied)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => copyText(allText, setCopied)}
+            disabled={!result}
+          >
             {copied ? <Check /> : <Copy />}
             {copied ? "Copied" : "Copy all"}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => generate(true)} disabled={loading}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => generate(true)}
+            disabled={loading || !result}
+          >
             <RefreshCw /> Regenerate
           </Button>
         </div>
       </div>
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <EditableResearchCard
-          icon={FileText}
-          title="Executive summary"
-          value={result.summary}
-          onChange={(value) => setResult({ ...result, summary: value })}
-          wide
-        />
-        <ListResearchCard
-          icon={Lightbulb}
-          title="Key insights"
-          items={result.insights}
-          onChange={(insights) => setResult({ ...result, insights })}
-        />
-        <ListResearchCard
-          icon={Target}
-          title="Practical recommendations"
-          items={result.recommendations}
-          onChange={(recommendations) => setResult({ ...result, recommendations })}
-        />
-      </div>
+      {result ? (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <EditableResearchCard
+            icon={FileText}
+            title="Executive summary"
+            value={result.summary}
+            onChange={(value) => setResult({ ...result, summary: value })}
+            wide
+          />
+          <ListResearchCard
+            icon={Lightbulb}
+            title="Key insights"
+            items={result.insights}
+            onChange={(insights) => setResult({ ...result, insights })}
+          />
+          <ListResearchCard
+            icon={Target}
+            title="Practical recommendations"
+            items={result.recommendations}
+            onChange={(recommendations) => setResult({ ...result, recommendations })}
+          />
+        </div>
+      ) : (
+        <div className="mt-4 min-h-80 rounded-lg border border-dashed border-border bg-card">
+          <EmptyOutput
+            icon={Search}
+            title="Your research brief will appear here"
+            description="Choose a source, add your own material, and analyze it for clear insights and recommendations."
+          />
+        </div>
+      )}
       <Disclaimer />
     </div>
   );
@@ -799,7 +903,7 @@ function ListResearchCard({
   );
 }
 
-function Chatbot() {
+function Chatbot({ responseDetail }: { responseDetail: ResponseDetail }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 1,
@@ -822,7 +926,7 @@ function Chatbot() {
     window.setTimeout(() => {
       setMessages((old) => [
         ...old,
-        { id: Date.now() + 1, role: "assistant", text: answerFor(clean) },
+        { id: Date.now() + 1, role: "assistant", text: answerFor(clean, responseDetail) },
       ]);
       setStatus("ready");
     }, 850);
@@ -951,6 +1055,96 @@ function Chatbot() {
           </div>
         </div>
       </div>
+      <Disclaimer />
+    </div>
+  );
+}
+
+function SettingsView({
+  defaultTone,
+  onToneChange,
+  responseDetail,
+  onDetailChange,
+}: {
+  defaultTone: Tone;
+  onToneChange: (tone: Tone) => void;
+  responseDetail: ResponseDetail;
+  onDetailChange: (detail: ResponseDetail) => void;
+}) {
+  return (
+    <div>
+      <PageIntro
+        eyebrow="Preferences"
+        title="Shape your workspace."
+        description="Choose how new drafts and responses begin. These preferences apply only while this page remains open."
+      />
+      <div className="grid gap-5 xl:grid-cols-2">
+        <section className="rounded-lg border border-border bg-card p-5 panel-shadow sm:p-6">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="rounded-md bg-secondary p-2 text-primary">
+              <Mail className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-bold">Email preference</h2>
+              <p className="text-xs text-muted-foreground">Default tone for new email briefs</p>
+            </div>
+          </div>
+          <FieldLabel>Default tone</FieldLabel>
+          <div className="grid grid-cols-3 gap-2">
+            {(["Formal", "Friendly", "Persuasive"] as Tone[]).map((tone) => (
+              <Button
+                key={tone}
+                variant={defaultTone === tone ? "default" : "outline"}
+                onClick={() => onToneChange(tone)}
+              >
+                {tone}
+              </Button>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-border bg-card p-5 panel-shadow sm:p-6">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="rounded-md bg-secondary p-2 text-primary">
+              <SlidersHorizontal className="size-5" />
+            </div>
+            <div>
+              <h2 className="font-bold">Response detail</h2>
+              <p className="text-xs text-muted-foreground">Used by research and workplace chat</p>
+            </div>
+          </div>
+          <FieldLabel>Preferred length</FieldLabel>
+          <div className="grid grid-cols-3 gap-2">
+            {(["Concise", "Balanced", "Detailed"] as ResponseDetail[]).map((detail) => (
+              <Button
+                key={detail}
+                variant={responseDetail === detail ? "default" : "outline"}
+                onClick={() => onDetailChange(detail)}
+              >
+                {detail}
+              </Button>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <section className="mt-5 flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex items-start gap-3">
+          <div className="rounded-md bg-secondary p-2 text-primary">
+            <Trash2 className="size-5" />
+          </div>
+          <div>
+            <h2 className="font-bold">Session data</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Drafts and conversations are temporary and clear automatically when you refresh or
+              close the page.
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 rounded-md border border-border bg-secondary px-3 py-2 text-xs font-semibold text-muted-foreground">
+          Nothing is stored
+        </span>
+      </section>
       <Disclaimer />
     </div>
   );
