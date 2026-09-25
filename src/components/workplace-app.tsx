@@ -716,6 +716,11 @@ function ResearchAssistant({ responseDetail }: { responseDetail: ResponseDetail 
             )}
           </Button>
         </div>
+        {error && (
+          <p role="alert" className="mt-4 text-sm text-destructive">
+            {error}
+          </p>
+        )}
       </section>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div>
