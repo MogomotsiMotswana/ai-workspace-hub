@@ -104,7 +104,7 @@ function WorkplaceApp() {
         <div className="mt-auto border-t border-sidebar-border p-4">
           {!collapsed && (
             <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-              Everything in this demo stays in your browser session.
+              Your work isn't saved — it clears when you refresh.
             </p>
           )}
           <Button
@@ -182,7 +182,7 @@ function WorkplaceApp() {
             </div>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="size-2 rounded-full bg-primary" /> Local demo
+            <span className="size-2 rounded-full bg-primary" /> AI connected
           </div>
         </header>
 
@@ -807,7 +807,7 @@ function EditableResearchCard({
         <h3 className="font-bold">{title}</h3>
       </div>
       <textarea
-        className="min-h-24 w-full resize-y bg-transparent text-sm leading-6 text-muted-foreground outline-none"
+        className="min-h-24 w-full resize-y bg-transparent text-sm leading-6 text-muted-foreground outline-none [field-sizing:content]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -839,7 +839,7 @@ function ListResearchCard({
             <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
             <textarea
               aria-label={`${title} ${index + 1}`}
-              className="min-h-16 w-full resize-none bg-transparent text-sm leading-6 text-muted-foreground outline-none"
+              className="min-h-6 w-full resize-none bg-transparent text-sm leading-6 text-muted-foreground outline-none [field-sizing:content]"
               value={item}
               onChange={(e) =>
                 onChange(items.map((old, i) => (i === index ? e.target.value : old)))
