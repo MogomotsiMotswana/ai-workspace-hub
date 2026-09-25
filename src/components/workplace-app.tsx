@@ -922,7 +922,7 @@ function Chatbot({ responseDetail }: { responseDetail: ResponseDetail }) {
             </p>
           </div>
         </aside>
-        <div className="flex min-h-0 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-col">
           <div className="flex items-center gap-3 border-b border-border p-4">
             <img
               src={brandMark}
@@ -940,12 +940,12 @@ function Chatbot({ responseDetail }: { responseDetail: ResponseDetail }) {
             </div>
           </div>
           <Conversation className="min-h-0">
-            <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-4 py-6 sm:px-8">
+            <ConversationContent className="mx-auto w-full min-w-0 max-w-3xl gap-6 px-3 py-6 sm:px-8">
               {messages.map((message) => (
                 <Message
                   key={message.id}
                   from={message.role}
-                  className={message.role === "assistant" ? "max-w-[90%]" : "max-w-[82%]"}
+                  className={`min-w-0 [overflow-wrap:anywhere] ${message.role === "assistant" ? "max-w-full sm:max-w-[90%]" : "max-w-[85%]"}`}
                 >
                   <MessageContent
                     className={message.role === "user" ? "bg-primary text-primary-foreground" : ""}
