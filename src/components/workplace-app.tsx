@@ -45,6 +45,7 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import brandMark from "@/assets/workplace-ai-mark.png";
+import { chatReply, generateEmail, generateResearch } from "@/lib/ai.functions";
 
 type View = "dashboard" | "email" | "research" | "chat" | "settings";
 type Tone = "Formal" | "Friendly" | "Persuasive";
@@ -71,86 +72,8 @@ const suggestedPrompts = [
   "How can I give clearer feedback?",
 ];
 
-function answerFor(prompt: string, detail: ResponseDetail) {
-  const lower = prompt.toLowerCase();
-  let response: string;
-  if (lower.includes("priorit"))
-    response =
-      "Here’s a practical way to reset the week:\n\n1. **Choose three outcomes** that would make Friday feel successful.\n2. **Separate urgent from important**—move low-impact requests to a later list.\n3. **Protect two 60-minute focus blocks** for your highest-value task.\n4. **Send one expectation-setting note** to anyone affected by a changed deadline.\n\nStart with the outcome that removes the biggest blocker for other people.";
-  else if (lower.includes("agenda") || lower.includes("meeting"))
-    response =
-      "Use a decision-led agenda:\n\n- **5 min:** State the decision required and the shared goal\n- **10 min:** Confirm facts and constraints—no debate yet\n- **20 min:** Compare 2–3 viable options\n- **10 min:** Decide, assign an owner, and set a date\n- **5 min:** Capture risks and communication steps\n\nSend the decision question in advance so participants arrive prepared rather than discovering the issue in the room.";
-  else if (lower.includes("feedback"))
-    response =
-      "Try a clear, low-defensiveness structure: **observation → impact → request**.\n\n> “In the last two project updates, the risk section arrived after the review. That left the team little time to respond. For the next update, could you flag risks by Tuesday noon—even if the details are still developing?”\n\nKeep it specific, discuss the work rather than the person, and invite their perspective before agreeing on the next step.";
-  else
-    response = `A useful way to approach **${prompt}** is to define the outcome first, identify the smallest next decision, and make ownership explicit.\n\nI’d suggest:\n1. Write the desired result in one sentence.\n2. List the two constraints that matter most.\n3. Choose one action you can complete today.\n4. Tell affected colleagues what will happen next and when.\n\nThis keeps the work actionable without over-planning.`;
-
-  if (detail === "Concise") return response.split("\n\n").slice(0, 2).join("\n\n");
-  if (detail === "Detailed")
-    return `${response}\n\n**A useful next step:** Put the first action on your calendar, then define what “done” looks like before you begin.`;
-  return response;
-}
-
-function createEmailDraft(
-  recipient: string,
-  purpose: string,
-  points: string,
-  tone: Tone,
-  version: number,
-) {
-  const name = recipient.split(",")[0]?.trim() || recipient.trim();
-  const items = points
-    .split("\n")
-    .map((point) => point.trim())
-    .filter(Boolean);
-  const subject = purpose.replace(/[.!?]+$/, "");
-  const formattedPoints = items.map((point) => `• ${point}`).join("\n");
-  const opening =
-    tone === "Friendly"
-      ? `I hope you’re doing well. I wanted to reach out about ${purpose.toLowerCase()}.`
-      : tone === "Persuasive"
-        ? `${purpose} presents a valuable opportunity to create clear, measurable progress.`
-        : `I’m writing regarding ${purpose.toLowerCase()}.`;
-  const close =
-    tone === "Friendly"
-      ? "Let me know what you think, and I’ll take care of the next steps.\n\nThanks,"
-      : tone === "Persuasive"
-        ? "I recommend we align on these points now so we can move forward with confidence. Please share your thoughts.\n\nBest,"
-        : "Please review the points above and share any feedback or additions.\n\nKind regards,";
-  const alternate = version % 2 === 1 ? "Proposed next steps" : "Key points";
-  return `Subject: ${subject}${version % 2 === 1 ? " — next steps" : ""}\n\nHi ${name},\n\n${opening}\n\n${alternate}:\n${formattedPoints}\n\n${close}`;
-}
-
-function createResearchResult(
-  input: string,
-  sourceType: string,
-  version: number,
-  detail: ResponseDetail,
-): ResearchResult {
-  const clean = input.replace(/\s+/g, " ").trim();
-  const subject = clean.length > 100 ? `${clean.slice(0, 97)}…` : clean;
-  const source = sourceType === "Website URL" ? "the supplied website" : sourceType.toLowerCase();
-  const extra =
-    detail === "Detailed"
-      ? " The evidence should be tested against team size, role requirements, and existing operating norms before broad adoption."
-      : "";
-  return {
-    summary:
-      version % 2 === 0
-        ? `This ${source} examines ${subject}. The central takeaway is that successful implementation depends on clear ownership, measurable outcomes, and consistent communication rather than policy alone.${extra}`
-        : `A practical reading of ${subject} suggests that focused experiments are more useful than an immediate organisation-wide change. Teams should define the intended outcome, test the approach, and review evidence before scaling.${extra}`,
-    insights: [
-      `The strongest decisions connect “${subject}” to a specific workplace outcome rather than treating it as a standalone initiative.`,
-      "Clear expectations and visible ownership reduce execution gaps between planning and delivery.",
-      "A short review cycle makes it easier to identify unintended effects and adjust before they become embedded.",
-    ],
-    recommendations: [
-      "Define one measurable outcome and the person accountable for reporting progress.",
-      "Run a time-bound pilot with a representative team and document decisions as they are made.",
-      "Review results with affected colleagues, then keep, revise, or stop the approach based on evidence.",
-    ],
-  };
+function errText(e: unknown) {
+  return e instanceof Error ? e.message : "Something went wrong. Please try again.";
 }
 
 function copyText(text: string, setCopied: (value: boolean) => void) {
@@ -556,14 +479,22 @@ function EmailGenerator({ defaultTone }: { defaultTone: Tone }) {
   const [version, setVersion] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
-  const generate = (regenerate = false) => {
+  const [error, setError] = useState("");
+  const generate = async (regenerate = false) => {
     setGenerating(true);
-    window.setTimeout(() => {
-      const next = regenerate ? (version + 1) % 2 : version;
+    setError("");
+    const next = regenerate ? version + 1 : 0;
+    try {
+      const res = await generateEmail({
+        data: { recipient, purpose, points, tone, variation: next },
+      });
       setVersion(next);
-      setOutput(createEmailDraft(recipient, purpose, points, tone, next));
+      setOutput(res?.text ?? "");
+    } catch (e) {
+      setError(errText(e));
+    } finally {
       setGenerating(false);
-    }, 650);
+    }
   };
   return (
     <div>
@@ -641,6 +572,11 @@ function EmailGenerator({ defaultTone }: { defaultTone: Tone }) {
                 </>
               )}
             </Button>
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
           </div>
         </section>
         <section className="flex min-h-[600px] flex-col rounded-lg border border-border bg-card panel-shadow">
@@ -697,14 +633,22 @@ function ResearchAssistant({ responseDetail }: { responseDetail: ResponseDetail 
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const generate = (regen = false) => {
+  const [error, setError] = useState("");
+  const generate = async (regen = false) => {
     setLoading(true);
-    window.setTimeout(() => {
-      const next = regen ? (version + 1) % 2 : version;
-      setResult(createResearchResult(input, sourceType, next, responseDetail));
+    setError("");
+    const next = regen ? version + 1 : 0;
+    try {
+      const res = await generateResearch({
+        data: { sourceType, input, detail: responseDetail, variation: next },
+      });
+      if (res) setResult(res);
       setVersion(next);
+    } catch (e) {
+      setError(errText(e));
+    } finally {
       setLoading(false);
-    }, 750);
+    }
   };
   const allText = result
     ? `${result.summary}\n\nKey insights\n${result.insights.join("\n")}\n\nRecommendations\n${result.recommendations.join("\n")}`
@@ -917,19 +861,27 @@ function Chatbot({ responseDetail }: { responseDetail: ResponseDetail }) {
   useEffect(() => {
     inputRef.current?.focus();
   }, [status]);
-  const submit = (text: string) => {
+  const submit = async (text: string) => {
     const clean = text.trim();
     if (!clean || status === "submitted") return;
     const user: ChatMessage = { id: Date.now(), role: "user", text: clean };
-    setMessages((old) => [...old, user]);
+    const history = [...messages, user];
+    setMessages(history);
     setStatus("submitted");
-    window.setTimeout(() => {
-      setMessages((old) => [
-        ...old,
-        { id: Date.now() + 1, role: "assistant", text: answerFor(clean, responseDetail) },
-      ]);
-      setStatus("ready");
-    }, 850);
+    let reply: string;
+    try {
+      const res = await chatReply({
+        data: {
+          detail: responseDetail,
+          messages: history.slice(1).map(({ role, text }) => ({ role, text })),
+        },
+      });
+      reply = res?.text || "I couldn't come up with an answer. Could you rephrase that?";
+    } catch (e) {
+      reply = `⚠️ ${errText(e)}`;
+    }
+    setMessages((old) => [...old, { id: Date.now() + 1, role: "assistant", text: reply }]);
+    setStatus("ready");
   };
   return (
     <div>
