@@ -700,7 +700,7 @@ function ResearchAssistant({ responseDetail }: { responseDetail: ResponseDetail 
   const generate = (regen = false) => {
     setLoading(true);
     window.setTimeout(() => {
-      const next = regen ? (version + 1) % researchVersions.length : version;
+      const next = regen ? (version + 1) % 2 : version;
       setResult(createResearchResult(input, sourceType, next, responseDetail));
       setVersion(next);
       setLoading(false);
